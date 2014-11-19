@@ -130,7 +130,7 @@ several simplifications.
  - We do not implement advanced macro features like modules, R6RS
    libraries, or define-meta.
 
- - Since we use gensym to create fresh identifiers and that is not a
-   standardized feature, we implement our own version of gensym.  We
-   reserve the character "@" for this purpose and assume no
+ - Since we use `gensym` to create fresh identifiers and that is not a
+   standardized feature, we implement our own version of `gensym`.  We
+   reserve the character `@` for this purpose and assume no
    non-gensymed symbols ever involve that character.
