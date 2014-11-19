@@ -10,6 +10,8 @@ This library implements the hygienic macro expansion algorithm in:
 
 You can download a copy of that paper at: http://michaeldadams.org/papers/hygiene/
 
+The repository for this code is at: https://bitbucket.org/mdmkolbe/towards-the-essence-of-hygiene-expander/
+
 
 Running the tests
 =================
