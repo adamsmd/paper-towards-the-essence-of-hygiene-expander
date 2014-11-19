@@ -34,7 +34,7 @@
         (lambda (make)
           (lambda (field ...)
             (if (not (pred field)) (assertion-violation 'self "invalid argument type" 'pred 'field field)) ...
-            ((make field ...))))))]))
+            ((make) field ...)))))]))
 
 ;; A helper function for defining list types
 ;; Usage: ((list-of? f) x)

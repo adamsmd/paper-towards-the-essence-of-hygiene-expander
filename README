@@ -31,7 +31,7 @@ The output should be:
 If one of the tests fails, then `!!! FAILED !!!` will be printed under
 the appropriate test.
 
-This code has been tested under Chez Scheme 8.3.
+This code has been tested under Chez Scheme 8.3 and Vicare Scheme 0.3d7.
 
 
 Running the expander
