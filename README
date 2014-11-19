@@ -1,104 +1,127 @@
-==== Overview ====
+Overview
+========
 
 This library implements the hygienic macro expansion algorithm in:
 
-  Michael D. Adams. Towards the essence of hygiene. In Proceedings of
-  the 42nd ACM SIGPLAN-SIGACT Symposium on Principles of Programming
-  Languages, POPL '15. ACM, New York, NY, USA, January 2015. ISBN
-  978-1-4503-3300-9. doi: 10.1145/2676726.2677013.
+> Michael D. Adams. Towards the essence of hygiene. In Proceedings of
+> the 42nd ACM SIGPLAN-SIGACT Symposium on Principles of Programming
+> Languages, POPL '15. ACM, New York, NY, USA, January 2015. ISBN
+> 978-1-4503-3300-9. doi: 10.1145/2676726.2677013.
 
-  http://michaeldadams.org/papers/hygiene/
+You can download a copy of that paper at: http://michaeldadams.org/papers/hygiene/
 
-==== Running the tests ====
 
-To test this code, just load "tests.scm".
+Running the tests
+=================
+
+To test this code, just load `tests.scm`.
 
 The output should be:
 
-  Running 'or-test0'
-  Running 'or-test1'
-  Running 'or-test2'
-  Running 'or-test4'
-  Running 'inc-test1'
+    Running 'or-test0'
+    Running 'or-test1'
+    Running 'or-test2'
+    Running 'or-test4'
+    Running 'inc-test1'
 
-If one of the tests fails, then "!!! FAILED !!!" will be printed under
+If one of the tests fails, then `!!! FAILED !!!` will be printed under
 the appropriate test.
 
 This code has been tested under Chez Scheme 8.3.
 
-==== Running the expander ====
 
-To directly run the expander, import the (expand) library and call
-call (expand-s-expr #f env0 s-expr) where s-expr is the expression to
+Running the expander
+====================
+
+To directly run the expander, import the `(expand)` library and call
+`(expand-s-expr #f env0 s-expr)` where `s-expr` is the expression to
 expand.
 
-You can replace #f with a number for the maximum number of expansion
+You can replace `#f` with a number for the maximum number of expansion
 steps to take.
 
-If you have a different set of core forms, you can replace env0
-with a new default environment.
+If you have a different set of core forms, you can replace `env0` with
+a new default environment.
 
-NOTE:
+## Note ##
 
 The expander internally operates over k-syntax objects.  The
-expand-s-expr function automatically injects into and projects out of
-these k-syntax objects.  The s-expr notation is easier to read but
+`expand-s-expr` function automatically injects into and projects out
+of these k-syntax objects.  The s-expr notation is easier to read but
 looses some information.  Specifically, gensyms are reformatted to be
-human readable and identifiers are translated into an easier to read
+human readable and identifiers are translated into an easier-to-read
 vector notation.
 
-The expand-k-syntax function operates the same as expand-s-expr except
-that it uses these k-syntax objects.  See the implementation of
-expand-s-expr for how to inject into and project out of k-syntax.
+The `expand-k-syntax` function operates the same as `expand-s-expr`
+except that it uses these k-syntax objects.  See the implementation of
+`expand-s-expr` for how to inject into and project out of k-syntax.
 
-==== Files ====
 
-Top-level files:
- - expand.scm: The main expander
- - expand-primitives.scm: Primitives available to macro transformers
- - tests.scm: Tests of the main expander
+Organization
+============
 
-Data type definitions:
- - atoms.scm: Defines the types and operators for ref-atom and bind-atom
- - idents.scm: Defines the type and operators for ident
- - u-syntax.scm: Defines the type and operators for u-syntax
- - k-syntax.scm: Defines the type and operators for k-syntax
- - s-exprs.scm: Defines the type and operators for s-expr including functions for
+Top-level files
+---------------
+ - `expand.scm`: The main expander
+
+ - `expand-primitives.scm`: Primitives available to macro transformers
+
+ - `tests.scm`: Tests of the main expander
+
+Data-type definitions
+---------------------
+ - `atoms.scm`: Defines the types and operators for ref-atom and bind-atom
+
+ - `idents.scm`: Defines the type and operators for ident
+
+ - `u-syntax.scm`: Defines the type and operators for u-syntax
+
+ - `k-syntax.scm`: Defines the type and operators for k-syntax
+
+ - `s-exprs.scm`: Defines the type and operators for s-expr including functions for
                 injecting and projecting s-exprs to and from k-syntax and u-syntax
 
-Utility libraries:
- - gensym.scm: Unique symbol generation
- - record-match.scm: Defines a 'match' pattern matching form for matching records
- - typed-records.scm: Defines record definitions that check the types of arguments to the constructor
+Utility libraries
+-----------------
+ - `gensym.scm`: Unique symbol generation
 
-Misc:
- - syntax-case.scm: Scrap code and notes if we ever want to implement the syntax-case pattern matcher
+ - `record-match.scm`: Defines a `match` form for pattern matching records
 
-==== Limitations ====
+ - `typed-records.scm`: Defines record definitions that check the types
+                      of arguments to the constructor
+
+Misc
+----
+ - `syntax-case.scm`: Scrap code and notes if we ever want to implement
+                    the syntax-case pattern matcher
+
+
+Limitations
+===========
 
 Main aim of this code is an implementation of the algorithm described
 in "Towards the Essence of Hygiene".  For the sake of clarity we make
 several simplifications.
 
  - As in "Towards the Essence of Hygiene", we do not implement
-   datum->syntax, syntax->datum, define, or define-syntax.
+   `datum->syntax`, `syntax->datum`, `define`, or `define-syntax`.
 
  - As in "Towards the Essence of Hygiene", the algorithm we implement
    is quadratic in the size of the input though a full syntax-case
    implementation can be linear.
 
  - We directly implement the algorithm in the first have of "Towards
-   the Essence of Hygiene" (i.e., the one using 'gensym') instead of
+   the Essence of Hygiene" (i.e., the one using a gensym) instead of
    the nominal based implementation described in the latter half of
    "Towards the Essence of Hygiene".
 
- - 'syntax-case' is both a hygienic algorithm and a pattern matching
+ - `syntax-case` is both a hygienic algorithm and a pattern matching
    form used with that algorithm.  This code just implements the
    hygienic expansion algorithm and does not implement pattern
    matching or the forms that go with it.  This includes the
-   'syntax-case', 'quasi-syntax', and 'unquote' syntax forms.
+   `syntax-case`, `quasi-syntax`, and `unquote` syntax forms.
    (Though, these can actually be implemented as macros within the
    system implemented by this code.)
 
- - We do not implement advanced macro features like libraries or
-   define-meta.
+ - We do not implement advanced macro features like modules, R6RS
+   libraries, or define-meta.
