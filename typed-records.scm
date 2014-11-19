@@ -6,15 +6,14 @@
 ;; type of the objects they contain.
 
 ;; Defines a record type that checks the type of the objects it contains.
-;; Usage: (define-typed-record name (clauses ...) (field pred) ...)
+;; Usage: (define-typed-record name (field pred) ...)
 ;;  - Name is the name of the record type
-;;  - Clauses are define-record-type clauses. (Usually this will be empty.)
 ;;  - Field and pred are the field names and the predicate that that field must satisfy.
 (define-syntax define-typed-record
   (syntax-rules ()
-    [(_ self (clauses ...) (field pred) ...)
+    [(_ self (field pred) ...)
      (define-record-type self
-       clauses ...
+       (nongenerative self)
        (fields field ...)
        (protocol
         (lambda (make)
@@ -26,10 +25,10 @@
 ;; record type as the first argument to the form.
 (define-syntax define-typed-subrecord
   (syntax-rules ()
-    [(_ p self (clauses ...) (field pred) ...)
+    [(_ p self (field pred) ...)
      (define-record-type self
        (parent p)
-       clauses ...
+       (nongenerative self)
        (fields field ...)
        (protocol
         (lambda (make)

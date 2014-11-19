@@ -14,7 +14,7 @@
    hyg subst subst*
    )
   (import (rnrs) (rnrs eval)
-          (record-match) (typed-records) (gensym)
+          (record-match) (typed-records)
           (atoms) (idents) (u-syntax) (k-syntax) (s-exprs)
           )
   
@@ -32,10 +32,9 @@
 ;; You should usually pass env0 as the env parameter.
 
 (define (expand-s-expr n env s-expr)
-  (s-expr-prettify-gensyms
-   (s-expr-prettify-idents
-    (k-syntax->s-expr
-     (expand-k-syntax* n env (s-expr->k-syntax s-expr))))))
+  (s-expr-prettify-idents
+   (k-syntax->s-expr
+    (expand-k-syntax* n env (s-expr->k-syntax s-expr)))))
 
 ;; This function acts as a wrapper for the expander that goes from
 ;; k-syntax to k-syntax.  It is called by expand-s-expr and its 'n'

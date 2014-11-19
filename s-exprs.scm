@@ -1,8 +1,8 @@
 (library (s-exprs)
   (export
    s-expr->u-syntax s-expr->k-syntax k-syntax->s-expr
-   s-expr-map-type s-expr-prettify-idents s-expr-prettify-gensyms)
-  (import (rnrs) (record-match) (gensym)
+   s-expr-map-type s-expr-prettify-idents)
+  (import (rnrs) (record-match)
           (atoms) (idents) (k-syntax))
 
 ;; This library implements injection and projections for s-exprs to
@@ -64,8 +64,5 @@
 
 ;; Applies prettify-ident to all ident in an s-expr
 (define (s-expr-prettify-idents s) (s-expr-map-type ident? prettify-ident s))
-
-;; Applies prettify-gensym to all gensyms in an s-expr
-(define (s-expr-prettify-gensyms s) (s-expr-map-type gensym? prettify-gensym s))
 
 )

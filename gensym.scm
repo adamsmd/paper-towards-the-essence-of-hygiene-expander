@@ -1,24 +1,34 @@
 (library (gensym)
-  (export gensym gensym? prettify-gensym)
-  (import (scheme))
+  (export gensym gensym?)
+  (import (rnrs))
 
 ;; We need a way to generate fresh symbols.  Since gensym is not
-;; standardized, this library exports gensym and should be modified as
-;; needed to implement gensym.
+;; standardized, this library manually implements gensym.  It assumes
+;; that "@" is never used in a symbol.
 
-;; Imports from (scheme) that are re-exported
-;;
-;; gensym : string? -> symbol?
-;; gensym? : object -> boolean?
+;; The character reserved for use in gensyms
+(define gensym-char '#\@)
 
-;; Takes a gensym and returns a symbol with an easier to read name
-(define (prettify-gensym s)
-  (let ([str (gensym->unique-string s)])
-    (define (suffix i)
-      (cond
-       [(= i (string-length str)) str]
-       [(eq? '#\- (string-ref str i)) (substring str (+ i 1) (string-length str))]
-       [else (suffix (+ i 1))]))
-    (string->symbol (string-append (symbol->string s) ":" (suffix 0)))))
+;; The counter used internally to create new gensyms
+(define count 0)
+
+;; A local helper for finding characters in strings
+(define (string-index str c i)
+  (cond
+   [(eq? i (string-length str)) i]
+   [(eq? c (string-ref str i)) i]
+   [else (string-index str c (+ i 1))]))
+
+;; Creates a new gensym based on the symbol sym
+(define (gensym sym)
+  (set! count (+ 1 count))
+  (let* ([s (symbol->string sym)]
+         [i (string-index s gensym-char 0)])
+    (string->symbol (string-append (substring s 0 i) (list->string (list gensym-char)) (number->string count)))))
+
+;; Returns true iff sym is a gensym
+(define (gensym? sym)
+  (and (symbol? sym)
+       (not (eq? (string-length (symbol->string sym)) (string-index (symbol->string sym) gensym-char 0)))))
 
 )

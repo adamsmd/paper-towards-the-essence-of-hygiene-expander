@@ -9,7 +9,7 @@
 ;; This library defines types and operations for identifiers
 
 ;; An identifier is a diatomic pair of a ref-atom and a bind-atom.
-(define-typed-record ident () (ref ref-atom?) (bind bind-atom?))
+(define-typed-record ident (ref ref-atom?) (bind bind-atom?))
 
 ;; ident-ref=? and ident-bind=? respectively test whether the
 ;; ref-atoms or bind-atoms in two identifiers are equal.
