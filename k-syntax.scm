@@ -12,7 +12,7 @@
           k-syn make-k-syn k-syn?
           k-u-syntax make-k-u-syntax k-u-syntax?
 
-          traverse-k-syntax map-k-syntax
+          traverse-k-syntax
           )
   (import (rnrs) (record-match) (typed-records)
           (atoms) (u-syntax))
@@ -42,26 +42,6 @@
 
 ;;;;;;;;;;;;;;;;
 ;; K-syntax traversal
-
-;; Applies k-syntax-fun to every object in a k-syntax in a bottom-up traversal
-(define (map-k-syntax k-syntax-fun)
-  (define (rec-rhs bindings)
-    (map (lambda (binding) (list (car binding) (rec (cadr binding)))) bindings))
-  (define (rec k-syntax)
-    (k-syntax-fun
-     (match k-syntax ()
-      [#(k-syn _) k-syntax]
-      [#(k-u-syntax _) k-syntax]
-      [#(k-const _) k-syntax]
-      [#(k-var _) k-syntax]
-      [#(k-lam args body) (make-k-lam args (map rec body))]
-      [#(k-app fun args) (make-k-app (rec fun) (map rec args))]
-      [#(k-if test true false) (make-k-if (rec test) (rec true) (rec false))]
-      [#(k-let bindings body) (make-k-let (rec-rhs bindings) (map rec body))]
-      [#(k-letrec bindings body) (make-k-letrec (rec-rhs bindings) (map rec body))]
-      [#(k-let-syntax bindings body) (make-k-let-syntax (rec-rhs bindings) (map rec body))]
-      [#(k-letrec-syntax bindings body) (make-k-letrec-syntax (rec-rhs bindings) (map rec body))])))
-  rec)
 
 ;; Finds the left-most k-u-syntax and apply u-syntax-fun to it.
 ;; If there is none to update, returns #f.

@@ -66,15 +66,13 @@
   (define (extend-env form on-rhs lhs rhs env)
     (case form
       ;; TODO: document the logic behind these clauses
-      ['let (if on-rhs env (cons (cons lhs #f) env))]
-      ['letrec (cons (cons lhs #f) env)]
-      ['let-syntax (if on-rhs env (cons (cons lhs (make-macro-transformer rhs)) env))]
+      [(let) (if on-rhs env (cons (cons lhs #f) env))]
+      [(letrec) (cons (cons lhs #f) env)]
+      [(let-syntax) (if on-rhs env (cons (cons lhs (make-macro-transformer rhs)) env))]
       ;; Note that the spec doesn't say what happens when expanding
       ;; the rhs of a letrec-syntax requires calling a macro also
       ;; defined in that letrec-syntax.  We disallow this.
-      ['letrec-syntax (cons (cons lhs (if on-rhs #f (make-macro-transformer rhs))) env)]))
-
-;; TODO: these should be [(let) ...]
+      [(letrec-syntax) (cons (cons lhs (if on-rhs #f (make-macro-transformer rhs))) env)]))
 
 ;; TODO: two extend-env functions
 

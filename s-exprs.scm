@@ -34,13 +34,6 @@
 ;; we can just replace any let-syntax or letrec-syntax with a 'let'
 ;; with no binders.
 
-(define remove-let-syntax
-  (map-k-syntax (lambda (k-syntax)
-                  (match k-syntax ()
-                   [#(k-let-syntax _ body) (make-k-let '() body)]
-                   [#(k-letrec-syntax _ body) (make-k-let '() body)]
-                   [else k-syntax]))))
-
 (define k-syntax->s-expr
   (case-lambda
    [(k-syntax) (k-syntax->s-expr #f k-syntax)]
