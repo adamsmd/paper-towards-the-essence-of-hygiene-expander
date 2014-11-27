@@ -97,52 +97,52 @@
 (define-test or-test0 (or-macro `(or 1 2))
   '(letrec-syntax ([or@7 (lambda (stx@8)
                            (if (null? (cdr stx@8))
-                               '#t
+                               #'#t
                                (if (null? (cddr stx@8))
                                    (cadr stx@8)
                                    (list
-                                    '#(let let)
-                                    (list (list '#(tmp tmp) (cadr stx@8)))
+                                    #'#(let let)
+                                    (list (list #'#(tmp tmp) (cadr stx@8)))
                                     (list
-                                     '#(if if)
-                                     '#(tmp tmp)
-                                     '#(tmp tmp)
-                                     (cons '#(or@7 or) (cddr stx@8)))))))])
+                                     #'#(if if)
+                                     #'#(tmp tmp)
+                                     #'#(tmp tmp)
+                                     (cons #'#(or@7 or) (cddr stx@8)))))))])
      (let ([tmp@9 '1]) (if tmp@9 tmp@9 '2))))
 (define-test or-test1 `(let ([tmp 1]) ,(or-macro `(or 2 tmp)))
   '(let ([tmp@7 '1])
      (letrec-syntax ([or@8 (lambda (stx@9)
                              (if (null? (cdr stx@9))
-                                 '#t
+                                 #'#t
                                  (if (null? (cddr stx@9))
                                      (cadr stx@9)
                                      (list
-                                      '#(let let)
+                                      #'#(let let)
                                       (list
-                                       (list '#(tmp@7 tmp) (cadr stx@9)))
+                                       (list #'#(tmp@7 tmp) (cadr stx@9)))
                                       (list
-                                       '#(if if)
-                                       '#(tmp@7 tmp)
-                                       '#(tmp@7 tmp)
+                                       #'#(if if)
+                                       #'#(tmp@7 tmp)
+                                       #'#(tmp@7 tmp)
                                        (cons
-                                        '#(or@8 or)
+                                        #'#(or@8 or)
                                         (cddr stx@9)))))))])
        (let ([tmp@10 '2]) (if tmp@10 tmp@10 tmp@7)))))
 (define-test or-test2 (or-macro `(let ([tmp 1]) (or 2 tmp)))
   '(letrec-syntax ([or@11 (lambda (stx@12)
                             (if (null? (cdr stx@12))
-                                '#t
+                                #'#t
                                 (if (null? (cddr stx@12))
                                     (cadr stx@12)
                                     (list
-                                     '#(let let)
-                                     (list (list '#(tmp tmp) (cadr stx@12)))
+                                     #'#(let let)
+                                     (list (list #'#(tmp tmp) (cadr stx@12)))
                                      (list
-                                      '#(if if)
-                                      '#(tmp tmp)
-                                      '#(tmp tmp)
+                                      #'#(if if)
+                                      #'#(tmp tmp)
+                                      #'#(tmp tmp)
                                       (cons
-                                       '#(or@11 or)
+                                       #'#(or@11 or)
                                        (cddr stx@12)))))))])
      (let ([tmp@13 '1])
        (let ([tmp@14 '2]) (if tmp@14 tmp@14 tmp@13)))))
@@ -152,18 +152,18 @@
 (define-test or-test4 (or-macro `(let ([if 1]) (or 2 if)))
   '(letrec-syntax ([or@15 (lambda (stx@16)
                             (if (null? (cdr stx@16))
-                                '#t
+                                #'#t
                                 (if (null? (cddr stx@16))
                                     (cadr stx@16)
                                     (list
-                                     '#(let let)
-                                     (list (list '#(tmp tmp) (cadr stx@16)))
+                                     #'#(let let)
+                                     (list (list #'#(tmp tmp) (cadr stx@16)))
                                      (list
-                                      '#(if if)
-                                      '#(tmp tmp)
-                                      '#(tmp tmp)
+                                      #'#(if if)
+                                      #'#(tmp tmp)
+                                      #'#(tmp tmp)
                                       (cons
-                                       '#(or@15 or)
+                                       #'#(or@15 or)
                                        (cddr stx@16)))))))])
      (let ([if@17 '1])
        (let ([tmp@18 '2]) (if tmp@18 tmp@18 if@17)))))
@@ -177,15 +177,15 @@
                                 (let ([u@22 (cadr stx@21)]
                                       [v@23 (caddr stx@21)])
                                   (list
-                                   '#(let let)
-                                   (list (list u@22 (list '#(+ +) '1 u@22)))
+                                   #'#(let let)
+                                   (list (list u@22 (list #'#(+ +) #'1 u@22)))
                                    v@23)))])
        (let-syntax ([m@24 (lambda (stx@25)
                             (let ([y@26 (cadr stx@25)])
                               (list
-                               '#(let-inc@20 let-inc)
-                               '#(x@19 x)
-                               (list '#(* *) '#(x@19 x) '#(y@26 y)))))])
+                               #'#(let-inc@20 let-inc)
+                               #'#(x@19 x)
+                               (list #'#(* *) #'#(x@19 x) #'#(y@26 y)))))])
          (let ([x@27 (+ '1 x@19)]) (* x@27 y@26))))))
 
 (run-tests)

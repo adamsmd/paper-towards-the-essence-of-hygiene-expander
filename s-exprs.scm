@@ -22,33 +22,57 @@
 ;;;;;;;;;;;;;;;;
 ;; To s-expr
 
+;; TODO
 ;; Converts a k-syntax to an s-expr.  Leaves the contents of any
-;; contained u-syntax unchanged.
-(define (k-syntax->s-expr k-syntax)
-  (define (rec k-syntax)
-    (match k-syntax ()
+;; contained u-syntax unchanged.  If 'for-eval'? is true, then we
+;; slightly modify the output so it is appropriate for passing to
+;; 'eval'.  Specifically, we remove let-syntax and letrec-syntax, and
+;; we use 'quote' instead of 'syntax' as we do not want to assume the
+;; underlying system implements these forms.  (After all, that is the
+;; job of the expander implemented in this file.)  Fortunately, since
+;; the k-syntax in make-macro-transformer is already fully expanded,
+;; we can just replace any let-syntax or letrec-syntax with a 'let'
+;; with no binders.
 
-     ;; Boilerplate recursions
-     [#(k-u-syntax value) `(u-syntax ,value)]
-     [#(k-syn syn) `(quote ,syn)]
-     [#(k-const c) `(quote ,c)]
-     [#(k-var #(ref-atom r)) r]
-     [#(k-lam args body) `(lambda ,(map ref-atom-name args) . ,(map rec body))]
-     [#(k-app fun args) `(,(rec fun) . ,(map rec args))]
-     [#(k-if test true false) `(if ,(rec test) ,(rec true) ,(rec false))]
+(define remove-let-syntax
+  (map-k-syntax (lambda (k-syntax)
+                  (match k-syntax ()
+                   [#(k-let-syntax _ body) (make-k-let '() body)]
+                   [#(k-letrec-syntax _ body) (make-k-let '() body)]
+                   [else k-syntax]))))
 
-     ;; Recursions with bindings
-     [#(k-let bindings body)
-      `(let ,(map (lambda (b) `(,(ref-atom-name (car b)) ,(rec (cadr b)))) bindings) . ,(map rec body))]
-     [#(k-letrec bindings body)
-      `(letrec ,(map (lambda (b) `(,(ref-atom-name (car b)) ,(rec (cadr b)))) bindings) . ,(map rec body))]
-     [#(k-let-syntax bindings body)
-      `(let-syntax ,(map (lambda (b) `(,(ref-atom-name (car b)) ,(rec (cadr b)))) bindings) . ,(map rec body))]
-     [#(k-letrec-syntax bindings body)
-      `(letrec-syntax ,(map (lambda (b) `(,(ref-atom-name (car b)) ,(rec (cadr b)))) bindings) . ,(map rec body))]
-     ))
+(define k-syntax->s-expr
+  (case-lambda
+   [(k-syntax) (k-syntax->s-expr #f k-syntax)]
+   [(for-eval? k-syntax)
+    (define (rec k-syntax)
+      (match k-syntax ()
 
-  (rec k-syntax))
+       ;; Boilerplate recursions
+       [#(k-u-syntax value) `(u-syntax ,value)]
+       [#(k-syn syn) `(,(if for-eval? 'quote 'syntax) ,syn)]
+       [#(k-const c) `(quote ,c)]
+       [#(k-var #(ref-atom r)) r]
+       [#(k-lam args body) `(lambda ,(map ref-atom-name args) . ,(map rec body))]
+       [#(k-app fun args) `(,(rec fun) . ,(map rec args))]
+       [#(k-if test true false) `(if ,(rec test) ,(rec true) ,(rec false))]
+
+       ;; Recursions with bindings
+       [#(k-let bindings body)
+        `(let ,(map (lambda (b) `(,(ref-atom-name (car b)) ,(rec (cadr b)))) bindings)
+           . ,(map rec body))]
+       [#(k-letrec bindings body)
+        `(letrec ,(map (lambda (b) `(,(ref-atom-name (car b)) ,(rec (cadr b)))) bindings)
+           . ,(map rec body))]
+       [#(k-let-syntax bindings body)
+        `(let-syntax ,(if for-eval? '() (map (lambda (b) `(,(ref-atom-name (car b)) ,(rec (cadr b)))) bindings))
+           . ,(map rec body))]
+       [#(k-letrec-syntax bindings body)
+        `(letrec-syntax ,(if for-eval? '() (map (lambda (b) `(,(ref-atom-name (car b)) ,(rec (cadr b)))) bindings))
+           . ,(map rec body))]
+       ))
+
+    (rec k-syntax)]))
 
 ;;;;;;;;;;;;;;;;
 ;; Mapping across s-exprs

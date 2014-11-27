@@ -38,27 +38,57 @@ Running the expander
 ====================
 
 To directly run the expander, import the `(expand)` library and call
-`(expand-s-expr #f env0 s-expr)` where `s-expr` is the expression to
-expand.
+`(expand-s-expr #f env0 <s-expr>)` where the value of `<s-expr>` is
+an s-expression containing the expression to expand.
 
 You can replace `#f` with a number for the maximum number of expansion
 steps to take.
 
 If you have a different set of core forms, you can replace `env0` with
-a new default environment.
+a new default environment.  (TODO: zero is valid)
+
+TODO: put binder atoms in different domain of gensyms
+TODO: explain that ref atoms are not gensymed until needed
+
+For example, if you call the following
+
+    (expand-s-expr #f env0
+      '(let-syntax ([and2 (lambda (stx)
+                            (list #'if (cadr stx) (caddr stx) #'#f))])
+        (and2 x y)))
+
+then you should get something like the following
+
+    (let-syntax ((and2@1 (lambda (stx@2)
+                           (list '#(if if) (cadr stx@2) (caddr stx@2) '#f))))
+  (if x y '#f))
+
+
+See "tests.scm" for more examples of code 
+
+## Note ##
+
+The 
+
+TODO: example to expand
+
+TODO: no syntax-rules, no syntax-case
+
+TODO: [See the "Limitations" section of this README]
 
 ## Note ##
 
 The expander internally operates over k-syntax objects.  The
 `expand-s-expr` function automatically injects into and projects out
 of these k-syntax objects.  The s-expr notation is easier to read but
-looses some information.  Specifically, gensyms are reformatted to be
-human readable and identifiers are translated into an easier-to-read
-vector notation.
+loses some information.  Specifically, identifiers are translated into
+an easier-to-read vector notation.
 
 The `expand-k-syntax` function operates the same as `expand-s-expr`
 except that it uses these k-syntax objects.  See the implementation of
 `expand-s-expr` for how to inject into and project out of k-syntax.
+
+TODO: example of this
 
 
 Organization
@@ -114,7 +144,7 @@ several simplifications.
    is quadratic in the size of the input though a full syntax-case
    implementation can be linear.
 
- - We directly implement the algorithm in the first have of "Towards
+ - We directly implement the algorithm in the first half of "Towards
    the Essence of Hygiene" (i.e., the one using a gensym) instead of
    the nominal based implementation described in the latter half of
    "Towards the Essence of Hygiene".
@@ -123,7 +153,7 @@ several simplifications.
    form used with that algorithm.  This code just implements the
    hygienic expansion algorithm and does not implement pattern
    matching or the forms that go with it.  This includes the
-   `syntax-case`, `quasi-syntax`, and `unquote` syntax forms.
+   `syntax-case`, `quasisyntax`, and `unquote` syntax forms.
    (Though, these can actually be implemented as macros within the
    system implemented by this code.)
 

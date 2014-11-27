@@ -1,6 +1,6 @@
 (library (record-match)
   (export match)
-  (import (rnrs))
+  (import (rnrs) (record-match-helpers))
 
 ;; This library implements a 'match' pattern matching form that makes
 ;; it easy to pattern match records.
@@ -17,58 +17,20 @@
     (syntax-case stx ()
       [(_ scr lits . clauses)
        (let ()
-         (define count 0)
-         (define (gensym)
-           (set! count (+ 1 count))
-           (string->symbol (string-append "tmp" (number->string count))))
-         (define (is-lit? l)
-           (define (go lits)
-             (syntax-case lits ()
-               [() #f]
-               [(lit . lits) (or (free-identifier=? l #'lit) (go #'lits))]))
-           (go #'lits))
-         (define (mk-fields scr name number fields succ)
-           (syntax-case fields ()
-             [() succ]
-             [(field . fields)
-              (mk-pred #`((record-accessor (record-type-descriptor #,name) #,number) #,scr) #'field
-                       (mk-fields scr name (+ number 1) #'fields succ))]))
-         (define (mk-pred scr pat succ)
-           ;; identifier to examine * pattern * syntax on success -> syntax to implement the pattern match
-           ;; assumes the identifier 'fail is bound to a failure continuation
-           (with-syntax ([tmp (datum->syntax #'tmp (gensym))])
-           #`(let ([tmp #,scr])
-               #,(syntax-case pat ()
-                   [id (identifier? #'id)
-                    (cond
-                     [(free-identifier=? #'id #'_) succ]
-                     [(is-lit? #'id) #`(if (equal? tmp 'id) #,succ (fail))]
-                     [else #`(let ([id tmp]) #,succ)])]
-                   [(pat-car . pat-cdr)
-                    #`(if (pair? tmp)
-                          #,(mk-pred #'(car tmp) #'pat-car
-                                     (mk-pred #'(cdr tmp) #'pat-cdr
-                                              succ))
-                          (fail))]
-                   [#(name fields ...)
-                    #`(if (and (record? tmp)
-                               (equal? (record-rtd tmp) (record-type-descriptor name))
-                               (equal? (vector-length (record-type-field-names (record-type-descriptor name)))
-                                       #,(length (syntax->datum #'(fields ...)))))
-                          #,(mk-fields scr #'name 0 #'(fields ...) succ)
-                          (fail))]
-                   [atom (let ([x (syntax->datum #'atom)])
-                           (or (boolean? x) (number? x) (char? x)
-                               (string? x) (null? x)))
-                    #`(if (equal? tmp 'atom) #,succ (fail))]
-                   [_ (syntax-violation 'match "unknown pattern form" pat)]))))
          (define (mk-clauses clauses)
            (syntax-case clauses ()
              [() #'(error 'match "unmatched value" tmp)]
              [([pat body] . rest) (mk-clauses #'([pat #t body] . rest))]
              [([pat guard body] . rest)
-              #`(let ([fail (lambda () #,(mk-clauses #'rest))])
-                  #,(mk-pred #'tmp #'pat #'(if guard body (fail))))]))
+              #`(let ([next-clause (lambda () #,(mk-clauses #'rest))]
+                      [env (match-pattern (syntax->list #'lits) #'#,(escape-ellipses #'pat) tmp)])
+                  (if env
+                      (let #,(map (lambda (key) #`[#,key (cdr (assp (curry bound-identifier=? #'#,key) env))])
+                                  (pattern-vars (syntax->list #'lits) #'pat))
+                        (if guard
+                            body
+                            (next-clause)))
+                      (next-clause)))]))
          #`(let ([tmp scr]) #,(mk-clauses #'clauses)))])))
 
 #;(define (tests)

@@ -50,7 +50,7 @@
   (define (rec k-syntax)
     (k-syntax-fun
      (match k-syntax ()
-      [#(k-syn syn) k-syntax]
+      [#(k-syn _) k-syntax]
       [#(k-u-syntax _) k-syntax]
       [#(k-const _) k-syntax]
       [#(k-var _) k-syntax]
@@ -105,7 +105,6 @@
 
     (define (rec k-syntax) (rec-env env k-syntax))
     (match k-syntax ()
-
      ;; Apply "u-syntax-fun" to the u-syntax
      [#(k-u-syntax value) (u-syntax-fun env value)]
 

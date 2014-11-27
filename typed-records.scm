@@ -41,4 +41,7 @@
 ;;  Returns true iff x is a list and f returns true on all elements in that list.
 (define (list-of? f) (lambda (x) (and (list? x) (for-all f x))))
 
+;; TODO: non-empty-list-of?
+;; TODO: non-duplicating-list-of?
+
 )
