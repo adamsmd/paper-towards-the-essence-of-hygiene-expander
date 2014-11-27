@@ -69,18 +69,18 @@
 ;; Note that we use 'ap' and 'ap-map' to help us manage the job of
 ;; continuing the traversal when recursive calls return #f but
 ;; stopping when they return a true value.
-(define (traverse-k-syntax u-syntax-fun env-fun)
+(define (traverse-k-syntax u-syntax-fun rhs-env-fun body-env-fun)
   (define (rec-env env k-syntax)
 
-    (define (extend-env form on-rhs bindings)
+    (define (extend-env form env-fun bindings)
       (define (extend binding env)
-        (env-fun form on-rhs (ref-atom-name (car binding)) (cadr binding) env))
+        (env-fun form (ref-atom-name (car binding)) (cadr binding) env))
       (fold-right extend env bindings))
     (define (rec-bindings form bindings)
-      (define env^ (extend-env form #t bindings))
+      (define env^ (extend-env form rhs-env-fun bindings))
       (ap-map (lambda (binding) (ap (list (car binding)) (rec-env env^ (cadr binding)))) bindings))
     (define (rec-body form bindings body)
-      (define env^ (extend-env form #f bindings))
+      (define env^ (extend-env form body-env-fun bindings))
       (ap-map (lambda (k-syntax) (rec-env env^ k-syntax)) body))
 
     (define (rec k-syntax) (rec-env env k-syntax))
