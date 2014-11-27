@@ -1,4 +1,4 @@
-(library (record-match-helpers)
+(library (util record-match-helpers)
   (export match-pattern pattern-vars syntax->list curry escape-ellipses)
   (import (rnrs))
 

@@ -1,6 +1,6 @@
-(library (record-match)
+(library (util record-match)
   (export match)
-  (import (rnrs) (record-match-helpers))
+  (import (rnrs) (util record-match-helpers))
 
 ;; This library implements a 'match' pattern matching form that makes
 ;; it easy to pattern match records.

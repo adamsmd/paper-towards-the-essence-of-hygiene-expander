@@ -1,5 +1,5 @@
-(library (typed-records)
-  (export define-typed-record define-typed-subrecord list-of?)
+(library (util typed-records)
+  (export define-typed-record define-algebraic-type list-of?)
   (import (rnrs))
 
 ;; This library defines forms for defining record types that check the
@@ -21,20 +21,22 @@
             (if (not (pred field)) (assertion-violation 'self "invalid argument type" 'pred 'field field)) ...
             (make field ...)))))]))
 
-;; Behaves the same as define-typed-record except that it has a parent
-;; record type as the first argument to the form.
-(define-syntax define-typed-subrecord
+;; TODO
+(define-syntax define-algebraic-type
   (syntax-rules ()
-    [(_ p self (field pred) ...)
-     (define-record-type self
-       (parent p)
-       (nongenerative self)
-       (fields field ...)
-       (protocol
-        (lambda (make)
-          (lambda (field ...)
-            (if (not (pred field)) (assertion-violation 'self "invalid argument type" 'pred 'field field)) ...
-            ((make) field ...)))))]))
+    [(_ type-name [ctor (field pred) ...] ...)
+     (begin
+       (define-record-type type-name)
+       (define-record-type ctor
+         (parent type-name)
+         (nongenerative ctor)
+         (fields field ...)
+         (protocol
+          (lambda (make)
+            (lambda (field ...)
+              (if (not (pred field)) (assertion-violation 'self "invalid argument type" 'pred 'field field)) ...
+              ((make) field ...))))) ...)]))
+        
 
 ;; A helper function for defining list types
 ;; Usage: ((list-of? f) x)

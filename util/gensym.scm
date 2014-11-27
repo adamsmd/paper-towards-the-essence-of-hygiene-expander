@@ -1,4 +1,4 @@
-(library (gensym)
+(library (util gensym)
   (export gensym gensym?)
   (import (rnrs))
 

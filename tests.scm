@@ -1,4 +1,4 @@
-(import (expand) (gensym))
+(import (expand) (util gensym))
 
 ;; This file contains tests for the macro expander
 

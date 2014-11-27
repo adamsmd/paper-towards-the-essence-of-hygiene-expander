@@ -1,7 +1,14 @@
 (library (expand)
   (export
-   expand-s-expr expand-k-syntax* expand-k-syntax expand-u-syntax make-macro-transformer
+;; these are all traversals.  nothing interesting with respect to hygiene happens here
+   expand-s-expr expand-k-syntax* expand-k-syntax expand-u-syntax
 
+;; transformers for core forms.  only thing interesting is that we
+;; always generate fresh variable names and use subst* to rebind
+;; the reference parts of any identifiers with the same binder part
+;; as the bound identifiers
+;; This part handles reference hygiene
+   subst subst*
    env0
    lambda-transformer
    if-transformer
@@ -11,11 +18,15 @@
    letrec-syntax-transformer
    syntax-transformer
 
-   hyg subst subst*
+;; the construction of a hygienic macro transformer.
+;; Note that 'hyg' takes a non-hygenic macro transformer
+;; and turns it into a hygenic one.
+;; this part handles binder hygiene.
+   make-macro-transformer hyg
    )
   (import (rnrs) (rnrs eval)
-          (record-match) (typed-records)
-          (atoms) (idents) (u-syntax) (k-syntax) (s-exprs)
+          (util record-match) (util typed-records)
+          (types) (s-exprs)
           )
   
 ;; This library implements the main expander
@@ -60,45 +71,68 @@
 ;; make-macro-transformer is used to create the function that
 ;; implements macro transformers.
 
-(define (expand-k-syntax env k-syntax)
+;; TODO: document
+(define (map-seq f xs)
+  (cond
+   [(null? xs) '()]
+   [else (let ([x (f (car xs))]) (cons x (map-seq f (cdr xs))))]))
+
+(define-syntax seq
+  (syntax-rules ()
+    [(_ e0 e* ...) (seq0 () e0 e* ...)]))
+(define-syntax seq0
+  (syntax-rules ()
+    [(_ (v ...) e0 e* ...) (let ([tmp e0]) (seq0 (v ... tmp) e* ...))]
+    [(_ (v ...)) (v ...)]))
+
+(define (expand-k-syntax env0 k-syntax)
+  (define done #f)
+  (define (rec0 env k-syntax)
+    (define (rec k-syntax) (rec0 env k-syntax))
+    (define (rec-let make form bindings body) (rec-let0 env make form bindings body))
+    (if done
+     k-syntax
+     (match k-syntax ()
+      ;; Apply "u-syntax-fun" to the u-syntax
+      [#(k-u-syntax value) (begin (set! done #t) (expand-u-syntax env value))]
+
+      ;; Binding forms
+      [#(k-let bindings body) (rec-let make-k-let 'let bindings body)]
+      [#(k-letrec bindings body) (rec-let make-k-letrec 'letrec bindings body)]
+      [#(k-let-syntax bindings body) (rec-let make-k-let-syntax 'let-syntax bindings body)]
+      [#(k-letrec-syntax bindings body) (rec-let make-k-letrec-syntax 'letrec-syntax bindings body)]
+
+      ;; Everything else is a standard recursion
+      [#(k-syn _) k-syntax]
+      [#(k-const _) k-syntax]
+      [#(k-var _) k-syntax]
+      [#(k-lam args body) (seq make-k-lam args (map-seq rec body))]
+      [#(k-app fun args) (seq make-k-app (rec fun) (map-seq rec args))]
+      [#(k-if test true false) (seq make-k-if (rec test) (rec true) (rec false))])))
+
   ;; TODO: document this helper function
-  ;; TODO: see k-syntax:traverse-k-syntax
-  (define (rhs-extend-env form lhs rhs env)
-    (case form
-      ;; TODO: document the logic behind these clauses
-      [(let let-syntax) env]
-      ;; Note that the spec doesn't say what happens when expanding
-      ;; the rhs of a letrec-syntax requires calling a macro also
-      ;; defined in that letrec-syntax.  We disallow this.
-      [(letrec letrec-syntax) (cons (cons lhs #f) env)]))
+  (define (rec-let0 env make form bindings body)
+    (define (rec env) (lambda (k-syntax) (rec0 env k-syntax)))
+    (define (extend-env f)
+      (append (map (lambda (binding) (cons (ref-atom-name (car binding)) (f (cadr binding)))) bindings) env))
+    (define (rhs-env)
+      (case form
+        ;; TODO: document the logic behind these clauses
+        [(let let-syntax) env]
+        ;; Note that the spec doesn't say what happens when expanding
+        ;; the rhs of a letrec-syntax requires calling a macro also
+        ;; defined in that letrec-syntax.  We disallow this.
+        [(letrec letrec-syntax) (extend-env (lambda (x) #f))]))
+    (define (body-env)
+      (case form
+        [(let letrec) (extend-env (lambda (x) #f))]
+        [(let-syntax letrec-syntax) (extend-env make-macro-transformer)]))
+    (seq make (map-bindings (rec (rhs-env)) bindings)
+              (if done body (map-seq (rec (body-env)) body))))
 
-  (define (body-extend-env form lhs rhs env)
-    (case form
-      ;; TODO: document the logic behind these clauses
-      [(let letrec) (cons (cons lhs #f) env)]
-      [(let-syntax letrec-syntax) (cons (cons lhs (make-macro-transformer rhs)) env)]))
-
-  ((traverse-k-syntax expand-u-syntax rhs-extend-env body-extend-env) env k-syntax))
-
-;; This function creates a function implementing the macro transformer
-;; for a particular bit of k-syntax.
-;;
-;; In order to implement this, we project the k-syntax to an s-expr and use Scheme's 'eval'.
-;;
-;; We also use 'hyg' to ensure that the resulting function is hygienic.
-
-(define (make-macro-transformer k-syntax)
-;; TODO: note that f is not hyginic
-;; TODO: macro-call is u-syntax
-;; TODO: annotate with types
-  (define f (eval (k-syntax->s-expr #t k-syntax) eval-environment))
-  (lambda (macro-call) (make-k-u-syntax ((hyg f) macro-call))))
-
-;; The environment to use when eval'ing the definition of a macro
-;; TODO: note that must change if anything is added to expand-primitives (and comment in expand-primitives)
-(define eval-environment
-  (environment '(except (rnrs) free-identifier=? bound-identifier=?)
-               '(expand-primitives)))
+;; TODO: document
+  (let ([x (rec0 env0 k-syntax)])
+    (if done x #f)))
 
 ;;;;;;;;;;;;;;;;
 ;; Expanding U-Syntax
@@ -142,22 +176,25 @@
         [pat body]
         [else (error 'name "invalid syntax" tmp)]))]))
 
-;; This macro defines a short-hand for defining transformers
-;; for let-style core forms.
-;; TODO: more detailed explanation
-(define-syntax define-let-style-transformer-helper
-  (syntax-rules ()
-    [(_ name make rhs-fun)
-     (define-transformer (name (_ ([#(ident r b) rhs] (... ...)) . body))
-       (let ([r^ (map gensym-ref-atom r)])
-         (make (map (lambda (lhs rhs) (list lhs (make-k-u-syntax (rhs-fun b r^ rhs)))) r^ rhs)
-           (map (lambda (body) (make-k-u-syntax (subst* b r^ body))) body))))]))
+;;;;;;;;;;;;;;;;
+;; Subst
 
-(define-syntax define-let-style-transformer
-  (syntax-rules () [(_ name make) (define-let-style-transformer-helper name make (lambda (b r^ rhs) rhs))]))
+;; This function traverses a u-syntax, body, and for any identifiers
+;; with a binder part equal to b and replaces their reference part
+;; with r.
+(define (subst b r body)
+  (define (f ident)
+    (if (bind-atom-equal? (ident-bind ident) b)
+        (make-ident r b)
+        ident))
+  (u-syntax-map-idents f body))
 
-(define-syntax define-letrec-style-transformer
-  (syntax-rules () [(_ name make) (define-let-style-transformer-helper name make subst*)]))
+;; This function is the same as subst but it takes a list of binder
+;; parts and reference parts;
+(define (subst* bs rs body)
+  (cond
+   [(null? bs) body]
+   [else (subst* (cdr bs) (cdr rs) (subst (car bs) (car rs) body))]))
 
 ;;;;;;;;;;;;;;;;
 ;; Transformers for core forms
@@ -172,11 +209,30 @@
 (define-transformer (syntax-transformer (_ body))
   (make-k-syn body))
 
+;; This macro defines a short-hand for defining transformers
+;; for let-style core forms.
+;; TODO: more detailed explanation
+(define-syntax define-let-style-transformer-helper
+  (syntax-rules ()
+    [(_ name make rhs-fun)
+     (define-transformer (name (_ ([#(ident r b) rhs] (... ...)) . body))
+       (let ([r^ (map gensym-ref-atom r)])
+         (make (map (lambda (lhs rhs) (list lhs (make-k-u-syntax (rhs-fun b r^ rhs)))) r^ rhs)
+           (map (lambda (body) (make-k-u-syntax (subst* b r^ body))) body))))]))
+
+
 ;; Note that the syntax core forms have the same structure as their
 ;; non-syntax counter parts.  The difference shows up in what things
 ;; are bound to in the traversal in expand-k-syntax.
+(define-syntax define-let-style-transformer
+  (syntax-rules () [(_ name make) (define-let-style-transformer-helper name make (lambda (b r^ rhs) rhs))]))
+
 (define-let-style-transformer let-transformer make-k-let)
 (define-let-style-transformer let-syntax-transformer make-k-let-syntax)
+
+(define-syntax define-letrec-style-transformer
+  (syntax-rules () [(_ name make) (define-let-style-transformer-helper name make subst*)]))
+
 (define-letrec-style-transformer letrec-transformer make-k-letrec)
 (define-letrec-style-transformer letrec-syntax-transformer make-k-letrec-syntax)
 
@@ -192,6 +248,31 @@
     (let-syntax . ,let-syntax-transformer)
     (letrec-syntax . ,letrec-syntax-transformer)
     ))
+
+
+;;;;;;;;;;;;;;;;
+;; Macros
+
+;; This function creates a function implementing the macro transformer
+;; for a particular bit of k-syntax.
+;;
+;; In order to implement this, we project the k-syntax to an s-expr and use Scheme's 'eval'.
+;;
+;; We also use 'hyg' to ensure that the resulting function is hygienic.
+
+(define (make-macro-transformer k-syntax)
+;; TODO: note that f is not hyginic
+;; TODO: macro-call is u-syntax
+;; TODO: annotate with types
+  (define f (eval (k-syntax->s-expr #t k-syntax) eval-environment))
+  (lambda (macro-call) (make-k-u-syntax ((hyg f) macro-call))))
+
+;; The environment to use when eval'ing the definition of a macro
+;; TODO: note that must change if anything is added to expand-primitives (and comment in expand-primitives)
+(define eval-environment
+  (environment '(except (rnrs) free-identifier=? bound-identifier=?)
+               '(expand-primitives)))
+
 
 ;;;;;;;;;;;;;;;;
 ;; Enforcing hygiene
@@ -217,26 +298,5 @@
       (u-syntax-map-idents f u-syntax))
     (u-syntax-map-idents make-perm arg) ;; generate the permutation
     (apply-permutation perm (f (apply-permutation perm arg))))) ;; takes advantage of the fact 'perm' is a self inverse
-
-
-;;;;;;;;;;;;;;;;
-;; Subst
-
-;; This function traverses a u-syntax, body, and for any identifiers
-;; with a binder part equal to b and replaces their reference part
-;; with r.
-(define (subst b r body)
-  (define (f ident)
-    (if (bind-atom-equal? (ident-bind ident) b)
-        (make-ident r b)
-        ident))
-  (u-syntax-map-idents f body))
-
-;; This function is the same as subst but it takes a list of binder
-;; parts and reference parts;
-(define (subst* bs rs body)
-  (cond
-   [(null? bs) body]
-   [else (subst* (cdr bs) (cdr rs) (subst (car bs) (car rs) body))]))
 
 )

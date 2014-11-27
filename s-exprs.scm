@@ -2,8 +2,7 @@
   (export
    s-expr->u-syntax s-expr->k-syntax k-syntax->s-expr
    s-expr-map-type s-expr-prettify-idents)
-  (import (rnrs) (record-match)
-          (atoms) (idents) (k-syntax))
+  (import (rnrs) (util record-match) (types))
 
 ;; This library implements injection and projections for s-exprs to
 ;; and from k-syntax and u-syntax as well as functions for mapping

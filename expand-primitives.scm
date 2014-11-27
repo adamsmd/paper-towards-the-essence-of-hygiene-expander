@@ -1,6 +1,6 @@
 (library (expand-primitives)
   (export (rename (ident-ref=? free-identifier=?) (ident-bind=? bound-identifier=?)))
-  (import (idents))
+  (import (types))
 
 ;; This library defines the primitives that are accessible to macro
 ;; transformers when they are expanding.
