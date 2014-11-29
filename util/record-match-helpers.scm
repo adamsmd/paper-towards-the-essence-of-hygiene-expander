@@ -2,28 +2,46 @@
   (export match-pattern pattern-vars syntax->list curry escape-ellipses)
   (import (rnrs))
 
+;; This is a helper library used by record-match.scm for implementing
+;; match.  Users should never need to directly use anything in this
+;; library.
+
+;; ---------------------
+;; -- Utility helpers --
+;; ---------------------
+
+;; Returns a list of integers from n-1 down to 0
 (define (rev-iota n)
   (cond
    [(zero? n) '()]
    [else (cons (- n 1) (rev-iota (- n 1)))]))
+
+;; Returns a list of integers from 0 up to n-1
 (define (iota n) (reverse (rev-iota n)))
 
+;; Curries the function 'f'
 (define (curry f . args1) (lambda args2 (apply f (append args1 args2))))
 
+;; Returns true if k is free-identifier=? to some element of xs
 (define (mem-free-identifier k xs) (exists (curry free-identifier=? k) xs))
+
+;; Returns true if k is bound-identifier=? to some element of xs
 (define (mem-bound-identifier k xs) (exists (curry bound-identifier=? k) xs))
 
+;; Converts a syntax object representing a list into a list of syntax objects
 (define (syntax->list xs)
   (syntax-case xs ()
     [() '()]
     [(x . xs) (cons #'x (syntax->list #'xs))]))
 
+;; Takes a list of identifiers and removes the duplicates (as defined by bound-identifier=?)
 (define (uniq xs)
   (cond
    [(null? xs) '()]
    [(mem-bound-identifier (car xs) (cdr xs)) (uniq (cdr xs))]
    [else (cons (car xs) (uniq (cdr xs)))]))
 
+;; Converts any ellipses in a syntax object into double ellipses (which is an escaping form for ellipses)
 (define (escape-ellipses stx)
   (syntax-case stx ()
     [x (and (identifier? #'x) (free-identifier=? #'x #'(... ...))) #'((... ...) (... ...))]
@@ -31,8 +49,10 @@
     [#(x ...) (with-syntax ([(y ...) (escape-ellipses #'(x ...))]) #`#(y ...))]
     [_ stx]))
 
-;; > (pattern-vars (list #'lit) #'(x (#(foo y z) (... ...)) lit 3 _))
-;; (#<syntax x> #<syntax y> #<syntax z>)
+;; Returns a list of the variables bound by a pattern
+;;
+;; Example: (pattern-vars (list #'lit) #'(x (#(foo y z) (... ...)) lit 3 _))
+;;   ==> (#<syntax x> #<syntax y> #<syntax z>)
 (define (pattern-vars lits pattern)
   (define (rec pattern)
     (syntax-case pattern ()
@@ -52,7 +72,10 @@
                   (string? x) (null? x)))
             '()]))
   (uniq (rec pattern)))
-  
+
+;; This function takes a list of environments mapping keys to results
+;; and produces a new environment that maps keys to lists of results.
+;; It is used to implement "..." in the matcher.
 (define (combine-envs envs)
   (define (get key)
     (cons key
@@ -60,12 +83,20 @@
                     (cons (cdr (assp (curry bound-identifier=? key) env)) env*)) '() envs)))
   (map get (map car (car envs))))
 
-;; > (define-record-type foo (fields a b))
-;; > (match-pattern (list #'lit) #'(x (#(foo y z) (... ...)) lit 3 _) `(1 (,(make-foo 2 3) ,(make-foo 4 5)) lit 3 9))
-;; ((#<syntax x> . 1) (#<syntax y> 2 4) (#<syntax z> 3 5))
+;; 'match-pattern' is a simple interpreter that matches a datum
+;; against a pattern.  If it matches, an association list is returned
+;; with the bindings for each pattern variable.  Otherwise it returns
+;; #f.  This function is the core of the pattern matcher and is
+;; basically an interpreter for the pattern language.
+;;
+;; Note: The returned env is always fully populated with all pattern variables
+;;
+;; Example:
+;;   > (define-record-type foo (fields a b))
+;;   > (match-pattern (list #'lit) #'(x (#(foo y z) (... ...)) lit 3 _) `(1 (,(make-foo 2 3) ,(make-foo 4 5)) lit 3 9))
+;;   ((#<syntax x> . 1) (#<syntax y> 2 4) (#<syntax z> 3 5))
 
 (define (match-pattern lits pattern datum)
-;; TODO: we require that env be fully populated
   (define (go k)
     (define (fail) (k #f))
     (define-syntax test

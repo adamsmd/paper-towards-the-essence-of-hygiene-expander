@@ -1,10 +1,16 @@
 (library (util record-match)
-  (export match)
+  (export match define-match)
   (import (rnrs) (util record-match-helpers))
 
 ;; This library implements a 'match' pattern matching form that makes
-;; it easy to pattern match records.
+;; it easy to pattern match records and a 'define-match' form that
+;; makes it easy to define functions that pattern match their
+;; argument.
 ;;
+;; Note that this implementation is not efficient.  In addition, due
+;; to phase restrictions in Scheme, the main functions implementing
+;; matching are in the record-match-helpers library.
+
 ;; Usage: (match scr (lits ...) [pat guard body] ...)
 ;;  - Scr is an expression that is pattern matched
 ;;  - Lits is a lit of literals that are treated as literal *symbols* in the following patterns
@@ -32,6 +38,22 @@
                             (next-clause)))
                       (next-clause)))]))
          #`(let ([tmp scr]) #,(mk-clauses #'clauses)))])))
+
+;; This form defines a function that pattern matches its argument.
+;;
+;; Usage #1: (define-match func [pat body] ...)
+;;   Defines a function 'func' that takes one argument that is pattern matched against each 'pat'.
+;;
+;; Usage #2: (define-match (func pat) body)
+;;   This is a simplified version of define-match for when there is only one pattern match clause
+(define-syntax define-match
+  (syntax-rules ()
+    [(_ (name pattern) body ...) (define-match name [pattern (begin body ...)])]
+    [(_ name clauses ...) (define (name tmp)
+                                   (match tmp ()
+                                     clauses ...
+                                     [_ (error 'name "unmatched input" tmp)]))]))
+  
 
 #;(define (tests)
 (print-gensym 'pretty)

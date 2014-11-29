@@ -22,10 +22,12 @@ To test this code, just load `tests.scm`.
 
 The output should be:
 
+    Running 'test0'
+    Running 'test1'
     Running 'or-test0'
     Running 'or-test1'
     Running 'or-test2'
-    Running 'or-test4'
+    Running 'or-test3'
     Running 'inc-test1'
 
 If one of the tests fails, then `!!! FAILED !!!` will be printed under
@@ -49,6 +51,7 @@ a new default environment.  (TODO: zero is valid)
 
 TODO: put binder atoms in different domain of gensyms
 TODO: explain that ref atoms are not gensymed until needed
+TODO: note that using quote in the output instead of 
 
 For example, if you call the following
 
@@ -94,40 +97,34 @@ TODO: example of this
 Organization
 ============
 
+If you want to understand the code, the main files you want to read
+are `types.scm` so you understand the types being used and
+`expand.scm` so you understand the expansion process.  All other files
+are merely to support these two files.
+
 Top-level files
 ---------------
  - `expand.scm`: The main expander
 
- - `expand-primitives.scm`: Primitives available to macro transformers
-
  - `tests.scm`: Tests of the main expander
 
-Data-type definitions
----------------------
- - `atoms.scm`: Defines the types and operators for ref-atom and bind-atom
-
- - `idents.scm`: Defines the type and operators for ident
-
- - `u-syntax.scm`: Defines the type and operators for u-syntax
-
- - `k-syntax.scm`: Defines the type and operators for k-syntax
+ - `types.scm`: Defines the types and operators for ref-atom, bind-atom, ident, u-syntax and k-sytax
 
  - `s-exprs.scm`: Defines the type and operators for s-expr including functions for
-                injecting and projecting s-exprs to and from k-syntax and u-syntax
+                  injecting and projecting s-exprs to and from k-syntax and u-syntax
+
+ - `expand-primitives.scm`: Primitives available to macro transformers
 
 Utility libraries
 -----------------
- - `gensym.scm`: Unique symbol generation
+ - `util/gensym.scm`: Unique symbol generation
 
- - `record-match.scm`: Defines a `match` form for pattern matching records
+ - `util/record-match.scm`: Defines `match` and `define-match` forms for pattern matching records
 
- - `typed-records.scm`: Defines record definitions that check the types
-                      of arguments to the constructor
+ - `util/record-match-helpers.scm`: A helper library used by `util/record-match.scm`.
 
-Misc
-----
- - `syntax-case.scm`: Scrap code and notes if we ever want to implement
-                    the syntax-case pattern matcher
+ - `util/typed-records.scm`: Defines record definitions that check the types
+                             of arguments to the constructor
 
 
 Limitations
