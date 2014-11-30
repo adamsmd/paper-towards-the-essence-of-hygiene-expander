@@ -3,7 +3,7 @@ Overview
 
 This code implements the hygienic macro expansion algorithm in:
 
-> Michael D. Adams. Towards the essence of hygiene. In Proceedings of
+> Michael D. Adams. Towards the Essence of Hygiene. In Proceedings of
 > the 42nd ACM SIGPLAN-SIGACT Symposium on Principles of Programming
 > Languages, POPL '15. ACM, New York, NY, USA, January 2015. ISBN
 > 978-1-4503-3300-9. doi: 10.1145/2676726.2677013.
@@ -13,6 +13,18 @@ You can download a copy of that paper at: http://michaeldadams.org/papers/hygien
 The repository for this code is at: https://bitbucket.org/mdmkolbe/towards-the-essence-of-hygiene-expander/
 
 See the LICENSE file for licensing information.
+
+In this README you will find instructions on running the tests and
+directly invoking the expander.  When running the expander, please
+take particular note of the limitations of this implementation
+documented in the "Limitations" section of this README.
+
+Finally, if you are interested in understanding the implementation of
+this expander, you should take a quick look at the "Implementation"
+section at the end of this README to help get you oriented.  Also, the
+"Towards the Essence of Hygiene" paper explains the mathematical
+foundations and motivations underlying this code and may be a useful
+in understanding its overall design.
 
 
 Running the tests
@@ -33,6 +45,11 @@ The output should be:
 If one of the tests fails, then `!!! FAILED !!!` will be printed under
 the appropriate test.
 
+You can run an individual test with `(run-test <test-name>)`.  For
+example, `(run-test test0)`.  You can also get the input and expected
+output of a test with `(test-input <test-name>)` and `(test-output
+<test-name>)`.
+
 This code has been tested under Chez Scheme 8.3 and Vicare Scheme 0.3d7.
 
 
@@ -43,17 +60,34 @@ To directly run the expander, import the `(expand)` library and call
 `(expand-s-expr #f env0 <s-expr>)` where the value of `<s-expr>` is
 an s-expression containing the expression to expand.
 
-You can replace `#f` with a number for the maximum number of expansion
-steps to take.
+You can replace `#f` with a non-negative integer for the maximum
+number of expansion steps to take.
 
 If you have a different set of core forms, you can replace `env0` with
-a new default environment.  (TODO: zero is valid)
+a new default environment.  (Most people will not need to do this.)
 
-TODO: put binder atoms in different domain of gensyms
-TODO: explain that ref atoms are not gensymed until needed
-TODO: note that using quote in the output instead of 
+You can directly run a particular test with `(expand-s-expr #f env0
+(test-input <test-name>))`.
 
-For example, if you call the following
+## S-expression notation ##
+
+The expand-s-expr function uses s-expressions as input and output.
+However, the expander operates on diatomic identifiers that contain
+two atoms (which are represented by a Scheme symbol) instead of one.
+When these are equal to each other, we can just use the symbol to
+stand for the diatomic identifier.  However, when they are different,
+we use a vector notation `#(r b)` for an identifier with a reference
+part of `r` and a binder part of `b`.
+
+## Gensyms ##
+
+During the process of expansion gensymed versions of atoms may be
+created.  These use `@` and a number as a suffix (e.g. `foo@23`) so
+make sure that none of the symbols in your input programs contain `@`.
+
+## Example ##
+
+If you call the following
 
     (expand-s-expr #f env0
       '(let-syntax ([and2 (lambda (stx)
@@ -62,70 +96,20 @@ For example, if you call the following
 
 then you should get something like the following
 
-    (let-syntax ((and2@1 (lambda (stx@2)
-                           (list '#(if if) (cadr stx@2) (caddr stx@2) '#f))))
-  (if x y '#f))
+    (let-syntax ([and2@50 (lambda (stx@51)
+                            (list #'if (cadr stx@51) (caddr stx@51) #'#f))])
+      (if x y '#f))
 
+See "tests.scm" for more examples of code.
 
-See "tests.scm" for more examples of code 
+## Low-level interface ##
 
-## Note ##
-
-The 
-
-TODO: example to expand
-
-TODO: no syntax-rules, no syntax-case
-
-TODO: [See the "Limitations" section of this README]
-
-## Note ##
-
-The expander internally operates over k-syntax objects.  The
-`expand-s-expr` function automatically injects into and projects out
-of these k-syntax objects.  The s-expr notation is easier to read but
-loses some information.  Specifically, identifiers are translated into
-an easier-to-read vector notation.
-
-The `expand-k-syntax` function operates the same as `expand-s-expr`
-except that it uses these k-syntax objects.  See the implementation of
-`expand-s-expr` for how to inject into and project out of k-syntax.
-
-TODO: example of this
-
-
-Organization
-============
-
-If you want to understand the code, the main files you want to read
-are `types.scm` so you understand the types being used and
-`expand.scm` so you understand the expansion process.  All other files
-are merely to support these two files.
-
-Top-level files
----------------
- - `expand.scm`: The main expander
-
- - `tests.scm`: Tests of the main expander
-
- - `types.scm`: Defines the types and operators for ref-atom, bind-atom, ident, u-syntax and k-sytax
-
- - `s-exprs.scm`: Defines the type and operators for s-expr including functions for
-                  injecting and projecting s-exprs to and from k-syntax and u-syntax
-
- - `expand-primitives.scm`: Primitives available to macro transformers
-
-Utility libraries
------------------
- - `util/gensym.scm`: Unique symbol generation
-
- - `util/record-match.scm`: Defines `match` and `define-match` forms for pattern matching records
-
- - `util/record-match-helpers.scm`: A helper library used by `util/record-match.scm`.
-
- - `util/typed-records.scm`: Defines record definitions that check the types
-                             of arguments to the constructor
-
+The `expand-s-expr` function is a wrapper that presents a simplified
+interface to the `expand-k-syntax*` function.  Specifically, it
+automatically converts between the easier-to-read s-expr notation and
+the k-syntax objects used internally.  If you want to play with this
+internal representation, you should look at the implementation of
+`expand-s-expr`.
 
 Limitations
 ===========
@@ -133,6 +117,24 @@ Limitations
 Main aim of this code is an implementation of the algorithm described
 in "Towards the Essence of Hygiene".  For the sake of clarity we make
 several simplifications.
+
+ - `syntax-case` is both a hygienic algorithm and a pattern matching
+   form used with that algorithm.  This code just implements the
+   hygienic expansion algorithm and does not implement pattern
+   matching or the forms that go with it.
+
+   Macros must thus use operations such as `null?`, `car`, `cdr`,
+   `cons`, `free-identifier=?` and `bound-identifier=?` instead of
+   `syntax-case`, `syntax-rules`, `quasisyntax` and `unsyntax`.
+
+   The latter forms can actually be implemented as macros within the
+   system implemented by this code.  They just have not been
+   implemented yet.
+
+ - Since we use `gensym` to create fresh atoms and gensyms are not a
+   standardized feature, we implement our own version of `gensym`.  We
+   reserve the character `@` for this purpose and assume no
+   non-gensymed symbols ever involve that character.
 
  - As in "Towards the Essence of Hygiene", we do not implement
    `datum->syntax`, `syntax->datum`, `define`, or `define-syntax`.
@@ -146,18 +148,42 @@ several simplifications.
    the nominal based implementation described in the latter half of
    "Towards the Essence of Hygiene".
 
- - `syntax-case` is both a hygienic algorithm and a pattern matching
-   form used with that algorithm.  This code just implements the
-   hygienic expansion algorithm and does not implement pattern
-   matching or the forms that go with it.  This includes the
-   `syntax-case`, `quasisyntax`, and `unquote` syntax forms.
-   (Though, these can actually be implemented as macros within the
-   system implemented by this code.)
-
  - We do not implement advanced macro features like modules, R6RS
-   libraries, or define-meta.
+   libraries, or expand-time definitions (e.g. meta define).
 
- - Since we use `gensym` to create fresh identifiers and that is not a
-   standardized feature, we implement our own version of `gensym`.  We
-   reserve the character `@` for this purpose and assume no
-   non-gensymed symbols ever involve that character.
+
+Implementation
+==============
+
+If you want to understand the implementation, the main files you want
+to read are `types.scm` so you understand the types being used and
+`expand.scm` so you understand the expansion process.  Both of these
+files include comments explaining the key ideas and code structure.
+All other files are merely to support these two files.
+
+Top-level files
+---------------
+ - `types.scm`: Defines the types used by the expander and basic
+                operators for those types
+
+ - `expand.scm`: The main code for the expander
+
+ - `tests.scm`: Tests for the expander
+
+ - `s-exprs.scm`: Types and operators for s-expr including functions
+                  for injecting and projecting s-exprs to and from
+                  k-syntax and u-syntax
+
+ - `expand-primitives.scm`: Primitives available to macro transformers
+
+Utility libraries
+-----------------
+ - `util/gensym.scm`: Unique symbol generation
+
+ - `util/record-match.scm`: Defines `match` and `define-match` forms for pattern matching records
+
+ - `util/record-match-helpers.scm`: A helper library used by `util/record-match.scm`.
+
+ - `util/typed-records.scm`: Defines record definition forms that
+                             check the types of the arguments to their
+                             constructors

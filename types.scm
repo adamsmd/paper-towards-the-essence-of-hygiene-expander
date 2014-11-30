@@ -72,6 +72,9 @@
 ;;
 ;;   #[ident #[ref-atom r] #[bind-atom b]]
 ;;
+;; When 'r' and 'b' are identical, we simplify this further and when
+;; prettying printing, use use the symbol 'r'.
+;;
 ;; == U-syntax ==
 ;;
 ;; U-syntax is not yet fully expanded and thus has an *unknown*
@@ -122,8 +125,9 @@
 
 ;; Convert an ident to a vector notation that pretty prints better.
 (define (prettify-ident s)
-  (vector (ref-atom-name (ident-ref s))
-          (bind-atom-name (ident-bind s))))
+  (let ([r (ref-atom-name (ident-ref s))]
+        [b (bind-atom-name (ident-bind s))])
+    (if (eq? r b) r (vector r b))))
 
 ;; ==============
 ;; == U-syntax ==

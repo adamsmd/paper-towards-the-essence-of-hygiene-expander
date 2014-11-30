@@ -32,7 +32,7 @@
   `(lambda (x@1) x@1))
 
 (define-test test1 `(let-syntax ([m (lambda (stx) (syntax z))]) (m))
-  `(let-syntax ([m@1 (lambda (stx@2) (syntax #(z z)))]) z))
+  `(let-syntax ([m@1 (lambda (stx@2) (syntax z))]) z))
 
 ;; --------------------
 ;; -- Tests for 'or' --
@@ -50,13 +50,14 @@
      ,body))
 
 (define (or-macro-output tmp body)
+  (define t (if (eq? tmp 'tmp) 'tmp (vector tmp 'tmp)))
   `(letrec-syntax ([or@7 (lambda (stx@8)
                            (if (null? (cdr stx@8))
                                #'#t
                                (if (null? (cddr stx@8))
                                    (cadr stx@8)
-                                   (list #'#(let let) (list (list #'#(,tmp tmp) (cadr stx@8)))
-                                         (list #'#(if if) #'#(,tmp tmp) #'#(,tmp tmp)
+                                   (list #'let (list (list #',t (cadr stx@8)))
+                                         (list #'if #',t #',t
                                                (cons #'#(or@7 or) (cddr stx@8)))))))])
      ,body))
 
@@ -96,15 +97,15 @@
                                 (let ([u@22 (cadr stx@21)]
                                       [v@23 (caddr stx@21)])
                                   (list
-                                   #'#(let let)
-                                   (list (list u@22 (list #'#(+ +) #'1 u@22)))
+                                   #'let
+                                   (list (list u@22 (list #'+ #'1 u@22)))
                                    v@23)))])
        (let-syntax ([m@24 (lambda (stx@25)
                             (let ([y@26 (cadr stx@25)])
                               (list
                                #'#(let-inc@20 let-inc)
                                #'#(x@19 x)
-                               (list #'#(* *) #'#(x@19 x) #'#(y@26 y)))))])
+                               (list #'* #'#(x@19 x) #'#(y@26 y)))))])
          (let ([x@27 (+ '1 x@19)]) (* x@27 y@26))))))
 
 

@@ -13,7 +13,9 @@
 ;; The s-expression notation we use is standard except that for
 ;; diatomic identifiers we cannot use symbols.  Since R6RS record
 ;; notation is verbose and difficult to read, we steal vector notation
-;; and use #(r b) to represent #[ident #[ref-atom r] #[bind-atom b]].
+;; and use #(r b) to represent #[ident #[ref-atom r] #[bind-atom b]]
+;; when r and b are not equal.  When they are equal, we just use the
+;; symbol r.
 
 ;; =================
 ;; == From s-expr ==
