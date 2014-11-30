@@ -71,9 +71,9 @@ You can directly run a particular test with `(expand-s-expr #f env0
 
 ## S-expression notation ##
 
-The expand-s-expr function uses s-expressions as input and output.
+The `expand-s-expr` function uses s-expressions as input and output.
 However, the expander operates on diatomic identifiers that contain
-two atoms (which are represented by a Scheme symbol) instead of one.
+two atoms (which are represented by Scheme symbols) instead of one.
 When these are equal to each other, we can just use the symbol to
 stand for the diatomic identifier.  However, when they are different,
 we use a vector notation `#(r b)` for an identifier with a reference
@@ -83,73 +83,79 @@ part of `r` and a binder part of `b`.
 
 During the process of expansion gensymed versions of atoms may be
 created.  These use `@` and a number as a suffix (e.g. `foo@23`) so
-make sure that none of the symbols in your input programs contain `@`.
+you should make sure that none of the symbols in your input programs
+contain `@`.
 
 ## Example ##
 
 If you call the following
 
-    (expand-s-expr #f env0
-      '(let-syntax ([and2 (lambda (stx)
-                            (list #'if (cadr stx) (caddr stx) #'#f))])
-        (and2 x y)))
+``` scheme
+(expand-s-expr #f env0
+  '(let-syntax ([and2 (lambda (stx)
+                        (list #'if (cadr stx) (caddr stx) #'#f))])
+    (and2 x y)))
+```
 
 then you should get something like the following
 
-    (let-syntax ([and2@50 (lambda (stx@51)
-                            (list #'if (cadr stx@51) (caddr stx@51) #'#f))])
-      (if x y '#f))
+``` scheme
+(let-syntax ([and2@50 (lambda (stx@51)
+                        (list #'if (cadr stx@51) (caddr stx@51) #'#f))])
+  (if x y '#f))
+```
 
-See "tests.scm" for more examples of code.
+See `tests.scm` for more examples of code expansion.
 
 ## Low-level interface ##
 
 The `expand-s-expr` function is a wrapper that presents a simplified
 interface to the `expand-k-syntax*` function.  Specifically, it
 automatically converts between the easier-to-read s-expr notation and
-the k-syntax objects used internally.  If you want to play with this
-internal representation, you should look at the implementation of
-`expand-s-expr`.
+the k-syntax and u-syntax objects used internally.  If you want to
+play with this internal representation, you should look at the
+implementation of `expand-s-expr` to see how to call
+`expand-k-syntax*`.
 
 Limitations
 ===========
 
 Main aim of this code is an implementation of the algorithm described
-in "Towards the Essence of Hygiene".  For the sake of clarity we make
+in "Towards the Essence of Hygiene".  For the sake of clarity, we make
 several simplifications.
 
- - `syntax-case` is both a hygienic algorithm and a pattern matching
-   form used with that algorithm.  This code just implements the
-   hygienic expansion algorithm and does not implement pattern
-   matching or the forms that go with it.
+  - `syntax-case` is both a hygienic algorithm and a pattern matching
+    form used with that algorithm.  This code just implements the
+    hygienic expansion algorithm and does not implement pattern
+    matching or the forms that go with it.
 
-   Macros must thus use operations such as `null?`, `car`, `cdr`,
-   `cons`, `free-identifier=?` and `bound-identifier=?` instead of
-   `syntax-case`, `syntax-rules`, `quasisyntax` and `unsyntax`.
+    Macros must thus use operations such as `null?`, `car`, `cdr`,
+    `cons`, `free-identifier=?` and `bound-identifier=?` instead of
+    `syntax-case`, `syntax-rules`, `quasisyntax` and `unsyntax`.
 
-   The latter forms can actually be implemented as macros within the
-   system implemented by this code.  They just have not been
-   implemented yet.
+    The latter forms can actually be implemented as macros within the
+    system implemented by this code.  They just have not been
+    implemented yet.
 
- - Since we use `gensym` to create fresh atoms and gensyms are not a
-   standardized feature, we implement our own version of `gensym`.  We
-   reserve the character `@` for this purpose and assume no
-   non-gensymed symbols ever involve that character.
+  - Since we use `gensym` to create fresh atoms and gensyms are not a
+    standardized feature, we implement our own version of `gensym`.
+    We reserve the character `@` for this purpose and assume no
+    non-gensymed symbols ever involve that character.
 
- - As in "Towards the Essence of Hygiene", we do not implement
-   `datum->syntax`, `syntax->datum`, `define`, or `define-syntax`.
+  - As in "Towards the Essence of Hygiene", we do not implement
+    `datum->syntax`, `syntax->datum`, `define`, or `define-syntax`.
 
- - As in "Towards the Essence of Hygiene", the algorithm we implement
-   is quadratic in the size of the input though a full syntax-case
-   implementation can be linear.
+  - As in "Towards the Essence of Hygiene", the algorithm we implement
+    is quadratic time though a full `syntax-case` implementation can
+    be linear.
 
- - We directly implement the algorithm in the first half of "Towards
-   the Essence of Hygiene" (i.e., the one using a gensym) instead of
-   the nominal based implementation described in the latter half of
-   "Towards the Essence of Hygiene".
+  - We directly implement the algorithm in the first half of "Towards
+    the Essence of Hygiene" (i.e., the one using a gensym) instead of
+    the nominal based implementation described in the latter half of
+    "Towards the Essence of Hygiene".
 
- - We do not implement advanced macro features like modules, R6RS
-   libraries, or expand-time definitions (e.g. meta define).
+  - We do not implement advanced macro features like modules, R6RS
+    libraries or expand-time definitions (e.g. meta define).
 
 
 Implementation
@@ -172,7 +178,7 @@ Top-level files
 
  - `s-exprs.scm`: Types and operators for s-expr including functions
                   for injecting and projecting s-exprs to and from
-                  k-syntax and u-syntax
+                  k-syntax and u-syntax.
 
  - `expand-primitives.scm`: Primitives available to macro transformers
 
@@ -182,7 +188,7 @@ Utility libraries
 
  - `util/record-match.scm`: Defines `match` and `define-match` forms for pattern matching records
 
- - `util/record-match-helpers.scm`: A helper library used by `util/record-match.scm`.
+ - `util/record-match-helpers.scm`: A helper library used by `util/record-match.scm`
 
  - `util/typed-records.scm`: Defines record definition forms that
                              check the types of the arguments to their
