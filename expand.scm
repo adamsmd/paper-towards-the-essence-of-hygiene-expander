@@ -147,6 +147,7 @@
   (define (rec0 env k-syntax)
     (define (rec k-syntax) (rec0 env k-syntax))
     (define (rec-let make form bindings body) (rec-let0 env make form bindings body))
+    (define (rec-lam args) (lambda (body) (rec0 (append (map (lambda (a) (cons (ref-atom-name a) #f)) args) env) body)))
     (if done
         k-syntax
         (match k-syntax ()
@@ -154,6 +155,7 @@
           [#(k-u-syntax value) (begin (set! done #t) (expand-u-syntax env value))]
 
           ;; Binding forms
+          [#(k-lam args body) (seq (make-k-lam) args (map-seq (rec-lam args) body))]
           [#(k-let bindings body) (rec-let make-k-let 'let bindings body)]
           [#(k-letrec bindings body) (rec-let make-k-letrec 'letrec bindings body)]
           [#(k-let-syntax bindings body) (rec-let make-k-let-syntax 'let-syntax bindings body)]
@@ -163,7 +165,6 @@
           [#(k-syntax-quote _) k-syntax]
           [#(k-const _) k-syntax]
           [#(k-var _) k-syntax]
-          [#(k-lam args body) (seq (make-k-lam) args (map-seq rec body))]
           [#(k-app fun args) (seq (make-k-app) (rec fun) (map-seq rec args))]
           [#(k-if test true false) (seq (make-k-if) (rec test) (rec true) (rec false))])))
 

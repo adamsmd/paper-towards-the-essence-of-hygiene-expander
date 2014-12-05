@@ -34,6 +34,9 @@
 (define-test test1 `(let-syntax ([m (lambda (stx) (syntax z))]) (m))
   `(let-syntax ([m@1 (lambda (stx@2) (syntax z))]) z))
 
+(define-test test2 `(let-syntax ([m (lambda (stx) (syntax z))]) (lambda (m) m))
+  `(let-syntax ([m@1 (lambda (stx@2) (syntax z))]) (lambda (m@2) m@2)))
+
 ;; --------------------
 ;; -- Tests for 'or' --
 ;; --------------------
